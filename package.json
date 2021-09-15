@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "@pie-dao/utils": "^1.0.0",
+    "babel": "^6.23.0",
+    "discord.js": "^13.1.0",
+    "dotenv": "^10.0.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.24.2",
+    "prettier": "^2.4.0",
+    "redis": "^3.1.2"
+  },
+  "name": "ElasticDao-SuperBot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "<nick@cryptobuilders.io>",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^7.32.0"
+  },
+  "scripts": {
+    "lint": "yarn run prettier && yarn run lint:js",
+    "lint:js": "npx eslint src/*.js src/**/*.js",
+    "prettier": "npx prettier --write src/*.js --write src/**/*.js --write src/**/**/*.js --write src/**/**/**/*.js",
+    "start": "node src/index.js"
+  }
+}
