@@ -3,18 +3,19 @@ export default class Handler {
     this.actions = actions;
   }
 
-  incoming(message, ...additional) {
-    const { type } = message;
+  incoming(messageCreate, ...additional) {
+    console.log(messageCreate, ...additional);
+    const { type } = messageCreate;
 
     switch (type) {
       case 'EGT_HOLDER':
-        this.actions.guildMemberJoin(message);
+        this.actions.guildMemberJoin(messageCreate);
         break;
       case 'DEFAULT':
-        this.actions.firstMessage(message);
+        this.actions.genMessage(messageCreate);
         break;
       default:
-        console.log('Received a message', message, additional);
+        console.log('Received a message', messageCreate, additional);
     }
   }
 

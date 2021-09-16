@@ -1,85 +1,50 @@
-import { Client, Intents, DMChannel } from 'discord.js';
-import { isAddress } from '@pie-dao/utils';
+import { Client, DMChannel, Intents } from 'discord.js';
 import dotenv from 'dotenv';
-import Redis from 'redis';
-import { Handler } from './handler';
+import Handler from './handler.js';
 
 dotenv.config();
 
-const redis = Redis.createClient();
-const getAsync = promisify(redis.get).bind(redis);
-const setAsync = promisify(redis.set).bind(redis);
-
-const myIntents = new Intents();
-myIntents.add(Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.GUILDS);
-
-const detectETHAddress = (str) => str.split(' ').find(isAddress);
-console.log('1');
-
-const detectNewETHAddress = async (str) => {
-  const address = detectETHAddress(str);
-
-  if (address) {
-    if (!(await getAsync(address))) {
-      return address;
-    }
-  }
-
-  return false;
-};
-
-console.log('2');
-
 // Create a new client instance
-const client = new Client({ intents: myIntents });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
-class BotActions {
+class Ready {
   constructor(client) {
     this.client = client;
   }
 
-  async firstMessage(message) {
-    const { author, channel, content } = message;
+  async genMessage(messageCreate) {
+    const { author, channel, content } = messageCreate;
     const isDM = channel.constructor === DMChannel;
     const dmChannel = isDM ? channel : await author.createDM();
-    console.log(
-      `Got a generic message', ${content}, 'on channel', ${channel.id}, 'from user', ${author}`
-    );
+    console.log('Got a generic message', content, 'on channel', channel.id, 'from user', author);
+    console.log(dmChannel);
 
-    if (content.match(/^!have_EGT/)) {
-      message.delete();
-      this.guildMemberJoin(message);
+    if (messageCreate.content.startsWith('!jellify')) {
+      messageCreate.delete();
+      this.guildMemberJoin(messageCreate);
       return;
-    }
-
-    if (content.match(/^!no_EGT/)) {
-      message.delete();
-      dmChannel.send(
-        'Hope you are enjoying our server and will be an official member with EGT soon TM'
-      );
-      return;
-    }
-
-    const address = await detectNewETHAddress(content);
-
-    if (address && isDM) {
-      dmChannel.send('this is the message after you have registered as a member');
     }
   }
 
   async guildMemberJoin({ author, channel: { guild } }) {
-    const userKey = `${guild.id} | ${author.id}`;
-    const dmChannel = guild.member(author);
+    const dmChannel = await author.createDM();
     const message = await dmChannel.send(
-      `Hey Hey! Looks like you want to be an official EGT holder member and join the "[E]" clan. For that I will need you to verify that you are not a bot. Respond to this message with ThumbsUP emoji in next 5 min.`
+      `Hey Hey! I've heard that you want to verify your address as EGT Holder. To be sure react to this message with Thumbs UP emoji within next 5 minutes.`
     );
 
-    const guildMember = guild.member(author);
+    // const EGTHodler = guild.client(author);
 
-    const timeoutPid = setTimeout(() => 30000);
+    console.log(guild.available);
 
-    const filter = (reaction) => reaction.emoji.name === '+1';
-    const collected = await message.awaitReactions(filter, { max: 1, time: 30000 });
+    const timeoutPid = setTimeout(
+      () => notEGTHodler(EGTHodler, 'Captcha Timeout', message),
+      10000
+    );
+
+    const filter = (reaction) => reaction.emoji.name === '👍';
+    const collected = await message
+      .awaitReactions({ filter, time: 30000 })
+      .then((collected) => console.log(`Collected ${collected.size} reactions`));
 
     if (collected.size === 1) {
       clearTimeout(timeoutPid);
@@ -87,30 +52,38 @@ class BotActions {
       return;
     }
 
-    const Nickname = await guild.nickname.fetch();
-    const newNickName = Nickname.setNickname('E |' + Nickname);
+    await dmChannel.send('please provide your Address on which you have EGT');
+  }
 
-    await guildMember.edit({ Nickname: [newNickName] }, `The real EGT Holder`);
-    await dmChannel.send(
-      `You've been verified as EGT holder. Your address has been encrypted and will be checked for EGT balance time to time.`
-    );
+  async notEGTHodler(EGTHodler, originalMessage) {
+    console.log('giving up on this one', EGTHodler.username, EGTHodler.id);
 
-    await Promise.all([
-      setAsync(`${userKey}|dmChannelId`, dmChannel.id),
-      setAsync(`dmChannelId|${dmChannel.id}`, userKey),
-    ]);
+    if (originalMessage) {
+      await originalMessage.delete();
+    }
+
+    const dmChannel = await EGTHodler.createDM();
+    await dmChannel.send('you have not provided your address, thus, I can not Jellify you.');
   }
 }
 
-const actions = new BotActions(client);
-const handler = new Handler(actions);
+const ready = new Ready(client);
+const handler = new Handler(ready);
 
-// When the client is ready, run this code (only once)
-client.once('ready', (...args) => {
-  console.log('Connected', ...args);
-});
+client.on('ready', (...args) => console.log('Bot is ready!', ...args));
 
-client.on('message', (...args) => handler.incoming(...args));
+client.on('messageCreate', (...args) => handler.incoming(...args));
+
+// const subscription = (eventName) => {
+//   return [
+//     eventName,
+//     (...args) => {
+//       console.log('EVENT', Client.messageCreate, 'received:', ...args);
+//     },
+//   ];
+// };
+
+//client.on(...subscription('applicationCommandCreate'));
 
 // Login to Discord with your client's token
 client.login(process.env.TOKEN);
