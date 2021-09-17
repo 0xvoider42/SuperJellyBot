@@ -1,11 +1,34 @@
 import { Client, DMChannel, Intents } from 'discord.js';
+import { ethers } from 'ethers';
+import { SDK } from '@elastic-dao/sdk';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 import Handler from './handler.js';
+import RedisAdapter from './RedisAdapter.js';
 
 dotenv.config();
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+
+const sdkConfig = {
+  customFetch: fetch,
+  env: { factoryAddress: process.env.FACTORY_ADDRESS },
+  ipfsGateways: [
+    'https://elasticdao01.mypinata.cloud',
+    'https://elasticdao02.mypinata.cloud',
+    'https://gateway.pinata.cloud',
+    'https://cloudflare-ipfs.com',
+    'https://ipfs.fleek.co',
+    'https://ipfs.io',
+  ],
+  live: true,
+  // multicall: true,
+  provider: new ethers.providers.JsonRpcProvider(process.env.RPC_URL),
+  storageAdapter: new RedisAdapter(),
+};
+
+const sdk = new SDK(sdkConfig);
 
 class Ready {
   constructor(client) {
@@ -19,51 +42,34 @@ class Ready {
     console.log('Got a generic message', content, 'on channel', channel.id, 'from user', author);
     console.log(dmChannel);
 
-    if (messageCreate.content.startsWith('!jellify')) {
+    if (messageCreate.content.startsWith('!')) {
       messageCreate.delete();
       this.guildMemberJoin(messageCreate);
       return;
     }
+
+    if (messageCreate.author.id === bot) {
+      return;
+    }
+  }
+
+  async checkEGTHolder({ sdk, author, channel: { guild } }) {
+    const dmChannel = await author.createDM();
+    const checkEGTAddress = await sdk.models.TokenHolder();
   }
 
   async guildMemberJoin({ author, channel: { guild } }) {
     const dmChannel = await author.createDM();
     const message = await dmChannel.send(
-      `Hey Hey! I've heard that you want to verify your address as EGT Holder. To be sure react to this message with Thumbs UP emoji within next 5 minutes.`
+      `Hey Hey! I've heard that you want to verify your address as EGT Holder.` +
+        `\n To be sure react to this message with Thumbs UP emoji within next 5 minutes.`
     );
 
-    // const EGTHodler = guild.client(author);
+    await message;
+    // this is how to get a username
+    console.log(author.username);
 
-    console.log(guild.available);
-
-    const timeoutPid = setTimeout(
-      () => notEGTHodler(EGTHodler, 'Captcha Timeout', message),
-      10000
-    );
-
-    const filter = (reaction) => reaction.emoji.name === '👍';
-    const collected = await message
-      .awaitReactions({ filter, time: 30000 })
-      .then((collected) => console.log(`Collected ${collected.size} reactions`));
-
-    if (collected.size === 1) {
-      clearTimeout(timeoutPid);
-    } else {
-      return;
-    }
-
-    await dmChannel.send('please provide your Address on which you have EGT');
-  }
-
-  async notEGTHodler(EGTHodler, originalMessage) {
-    console.log('giving up on this one', EGTHodler.username, EGTHodler.id);
-
-    if (originalMessage) {
-      await originalMessage.delete();
-    }
-
-    const dmChannel = await EGTHodler.createDM();
-    await dmChannel.send('you have not provided your address, thus, I can not Jellify you.');
+    //await dmChannel.send('please provide your Address on which you have EGT');
   }
 }
 
