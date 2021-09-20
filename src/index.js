@@ -8,9 +8,6 @@ import RedisAdapter from './RedisAdapter.js';
 
 dotenv.config();
 
-// Create a new client instance
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
-
 const sdkConfig = {
   customFetch: fetch,
   env: { factoryAddress: process.env.FACTORY_ADDRESS },
@@ -29,6 +26,9 @@ const sdkConfig = {
 };
 
 const sdk = new SDK(sdkConfig);
+
+// Create a new client instance
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 class Ready {
   constructor(client) {
@@ -51,11 +51,15 @@ class Ready {
     if (messageCreate.author.id === bot) {
       return;
     }
+    const address = await sdk.models.TokenHolder.isTokenHolder(content);
+    if (address && isDM) {
+      return address;
+    }
   }
 
   async checkEGTHolder({ sdk, author, channel: { guild } }) {
     const dmChannel = await author.createDM();
-    const checkEGTAddress = await sdk.models.TokenHolder();
+    const checkEGTAddress = await sdk.models.TokenHolder.isTokenHolder();
   }
 
   async guildMemberJoin({ author, channel: { guild } }) {
@@ -80,28 +84,5 @@ client.on('ready', (...args) => console.log('Bot is ready!', ...args));
 
 client.on('messageCreate', (...args) => handler.incoming(...args));
 
-// const subscription = (eventName) => {
-//   return [
-//     eventName,
-//     (...args) => {
-//       console.log('EVENT', Client.messageCreate, 'received:', ...args);
-//     },
-//   ];
-// };
-
-//client.on(...subscription('applicationCommandCreate'));
-
 // Login to Discord with your client's token
 client.login(process.env.TOKEN);
-
-// Sending a question to the member, weather they have EGT or NO.
-// If they do, ask for their address on which they have EGT.
-// If they don't conclude the question.
-
-// In case of receiving the address ===V
-// The address has to be encrypted and stored.
-// We need to check the address for EGT
-// If EGT is present the Nickname of the member is changed and E || is added to it
-// EGT balance needs to be checked several times a day, to confirm the EGT
-
-// When the client is ready, run this code (only once)
