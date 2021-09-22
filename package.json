@@ -7,6 +7,7 @@
     "dotenv": "^10.0.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.24.2",
+    "ethers": "^5.4.7",
     "node-fetch": "^3.0.0",
     "prettier": "^2.4.0",
     "redis": "^3.1.2"
@@ -24,6 +25,6 @@
     "lint": "yarn run prettier && yarn run lint:js",
     "lint:js": "npx eslint src/*.js src/**/*.js",
     "prettier": "npx prettier --write src/*.js --write src/**/*.js --write src/**/**/*.js --write src/**/**/**/*.js",
-    "start": "node src/index.js"
+    "start": "node src/index2.js"
   }
 }
