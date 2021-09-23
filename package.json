@@ -25,6 +25,6 @@
     "lint": "yarn run prettier && yarn run lint:js",
     "lint:js": "npx eslint src/*.js src/**/*.js",
     "prettier": "npx prettier --write src/*.js --write src/**/*.js --write src/**/**/*.js --write src/**/**/**/*.js",
-    "start": "node src/index2.js"
+    "start": "node src/index.js"
   }
 }
