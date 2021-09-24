@@ -1,4 +1,4 @@
-import { Client, DMChannel, Intents, Interaction, Message } from 'discord.js';
+import { Client, DMChannel, Intents, Interaction, GuildMember } from 'discord.js';
 import { ethers } from 'ethers';
 import { promisify } from 'util';
 import { SDK } from '@elastic-dao/sdk';
@@ -30,10 +30,16 @@ const sdkConfig = {
 console.log(sdkConfig);
 
 const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES],
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.DIRECT_MESSAGES,
+    Intents.FLAGS.GUILD_MEMBERS,
+  ],
 });
 
 const sdk = new SDK(sdkConfig);
+await sdk.promise;
 const redis = Redis.createClient();
 const getAsync = promisify(redis.get).bind(redis);
 const setAsync = promisify(redis.set).bind(redis);
@@ -57,10 +63,11 @@ class Ready {
     this.client = client;
   }
 
-  async genMessage(messageCreate) {
+  async genMessage(messageCreate, message) {
     const { author, channel, content } = messageCreate;
     const isDM = messageCreate.channel.type == 'DM';
     const dmChannel = isDM ? channel : await author.createDM();
+    const member = new GuildMember(author);
     console.log(
       `Got a generic message, ${content}, on channel, ${channel.id}, from user, ${author}`
     );
@@ -74,11 +81,9 @@ class Ready {
     }
 
     const address = await content.toString();
-
     const checkedAddress = await isAddress(address);
 
     console.log('DAO', dao.ecosystem);
-
     const checkingEGT = await sdk.models.TokenHolder.deserialize(address, dao.ecosystem, token);
 
     if (checkedAddress == true) {
@@ -87,10 +92,16 @@ class Ready {
 
     if (checkingEGT && isDM) {
       if (checkingEGT.lambda > 0) {
-        console.log(checkingEGT.lambda);
+        console.log(checkingEGT.lambda.toString());
+        console.log('CONTENT', messageCreate.content);
+        console.log('USERNAME', messageCreate.author.username);
+        console.log('Message', message);
+        messageCreate.member.setNickname(`[G] ${message.member.username}`);
         dmChannel.send('you got some EGT');
+        return;
+      } else {
+        dmChannel.send(`You don't have EGT`);
       }
-      dmChannel.send(`You don't have EGT`);
     }
   }
 

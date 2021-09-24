@@ -4,11 +4,17 @@ dotenv.config();
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
-client.on('message', async (message) => {
-  const { author, content, channel } = message;
-  const isDM = message.channel.type == 'DM';
-  const dmChannel = isDM ? channel : await author.createDM();
-  const text = await dmChannel.send('this is the DM');
+client.on('ready', () => {
+  console.log('I am ready!');
+});
+
+client.on('message', (message) => {
+  if (message.content.includes('!')) {
+    message.member.setNickname(`[G] ${message.member.user.username}`);
+  }
+
+  console.log(message.content);
+  console.log(message.member.user);
 });
 
 // collector.on('collect', (m) => {

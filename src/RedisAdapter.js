@@ -47,14 +47,53 @@ export default class RedisAdapter {
     return JSON.parse(storedValue);
   }
 
-  async persist(key, data) {
+  async persist(key, data, ttl) {
     await this.awaitAvailable();
     this.ensureAvailable();
 
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify(data);
-      this._client.set(key, payload, (_, status) => {
+      this._client.set(key, payload, (error, status) => {
         if (status === 'OK') {
+          if (ttl) {
+            console.log('Redis expire', key, data, ttl, error);
+            this._client.expire(key, ttl, (err, result) => {
+              console.log('Redis expire callback', err, result);
+            });
+          }
+
+          resolve(true);
+        } else {
+          console.log(key, payload, ttl, status, error);
+          reject(new Error(error));
+        }
+      });
+    });
+  }
+
+  async pop(key) {
+    await this.awaitAvailable();
+    this.ensureAvailable();
+
+    return new Promise((resolve, reject) => {
+      this._client.lpop(key, (_, value) => {
+        try {
+          resolve(JSON.parse(value));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  }
+
+  async push(key, data) {
+    await this.awaitAvailable();
+    this.ensureAvailable();
+
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify(data);
+      this._client.rpush(key, payload, (_, status) => {
+        if (status > 0) {
           resolve(true);
         } else {
           reject(new Error(status));
@@ -72,5 +111,21 @@ export default class RedisAdapter {
     });
 
     return true;
+  }
+
+  async unshift(key, data) {
+    await this.awaitAvailable();
+    this.ensureAvailable();
+
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify(data);
+      this._client.lpush(key, payload, (_, status) => {
+        if (status > 0) {
+          resolve(true);
+        } else {
+          reject(new Error(status));
+        }
+      });
+    });
   }
 }
