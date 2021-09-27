@@ -83,6 +83,11 @@ class Ready {
     const address = await content.toString();
     const checkedAddress = await isAddress(address);
 
+    if (checkedAddress == false) {
+      dmChannel.send('This is not and Ethereum Address, pleas provide a valid Address');
+      return;
+    }
+
     console.log('DAO', dao.ecosystem);
     const checkingEGT = await sdk.models.TokenHolder.deserialize(address, dao.ecosystem, token);
 
